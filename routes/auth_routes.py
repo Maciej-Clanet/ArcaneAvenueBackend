@@ -3,6 +3,10 @@ from fastapi import APIRouter, HTTPException
 
 from models.auth_models import AuthResponse, LoginForm, RegisterForm
 
+from database import users
+
+
+from pymongo.errors import DuplicateKeyError
 auth_router = APIRouter()
 
 
@@ -23,21 +27,14 @@ def read_root():
 @auth_router.post("/regiser", response_model=AuthResponse)
 def register_user(form: RegisterForm):
 
-    # check if account already exists
-    
-    existing_user = TEMP_USERS.get(form.email)
 
-    if(existing_user):
+    try: 
+        users.insert_one( form.model_dump() )
+    except DuplicateKeyError:
         raise HTTPException(
             status_code=409,
             detail="A user with this email already exists"
         )
-    
-
-    #add the user
-    TEMP_USERS[form.email] = form.model_dump()
-
-    print(TEMP_USERS)
 
     
     return AuthResponse(
@@ -49,13 +46,13 @@ def register_user(form: RegisterForm):
 @auth_router.post("/Login", response_model=AuthResponse)
 def register_user(form: LoginForm):
 
-    print(TEMP_USERS)
+   
 
-    existing_user = TEMP_USERS.get(form.email)
-    print(existing_user)
+    existing_user = users.find_one({"email" : form.email})
+
     if(existing_user == None):
        raise HTTPException(
-           status_code=404,
+           status_code=401,
            detail="Incorrect Credentials"
        )
 
