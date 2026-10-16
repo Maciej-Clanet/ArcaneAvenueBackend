@@ -42,7 +42,6 @@ def register_user(form: RegisterForm):
         account_type=form.account_type
     )
 
-
 @auth_router.post("/Login", response_model=AuthResponse)
 def register_user(form: LoginForm):
 
@@ -68,4 +67,5 @@ def register_user(form: LoginForm):
         email=existing_user["email"],
         account_type=existing_user["account_type"]
     )
+
 

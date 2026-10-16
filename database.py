@@ -11,3 +11,6 @@ db = client["arcane_avenue"]
 users = db["users"]
 users.create_index("email", unique=True)
 
+test_collection = db["test_collection"]
+test_collection.create_index("email", unique=True)
+
