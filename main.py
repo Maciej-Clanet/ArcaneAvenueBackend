@@ -9,6 +9,7 @@ app.include_router(
     tags=["Auth"],
 )
 
+
 @app.get("/")
 def read_root():
     return {"Hello": "goobers"}

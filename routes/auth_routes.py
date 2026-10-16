@@ -3,6 +3,8 @@ from fastapi import APIRouter, HTTPException
 
 from models.auth_models import LoginForm, RegisterForm, AuthResponse
 
+from database import test_collection
+
 auth_router = APIRouter()
 
 # EVERY TIME OUR SERVER REFRESHES, THIS WILL RESET ITSELF TO THIS
@@ -15,9 +17,10 @@ FAKE_USER_DB = {
     }
 }
 
-@auth_router.get("/test")
+@auth_router.get("/test/")
 def read_root():
     return {"auth": "test"}
+
 
 @auth_router.post("/register", response_model=AuthResponse)
 def register_user(form: RegisterForm):
@@ -45,3 +48,44 @@ def register_user(form: RegisterForm):
         email=form.email,
         account_type=form.account_type
     ) 
+
+
+
+@auth_router.post("/login", response_model=AuthResponse)
+def login_user(form: LoginForm):
+
+    found_user = FAKE_USER_DB.get(form.email)
+
+    # if no user found, raise an exception saying invalid credentials
+    if found_user == None:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid Credentials"
+        )
+
+    if found_user["password"] != form.password:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid Credentials"
+        )
+
+    return AuthResponse(
+        email=form.email,
+        account_type=found_user["account_type"]
+    ) 
+
+
+
+from pydantic import BaseModel
+class TestAdd(BaseModel):
+    email: str
+    description: str
+
+@auth_router.post("/test_add")
+def test_add(data: TestAdd):
+
+    our_data_in_dictionary_format = data.model_dump();
+
+    test_collection.insert_one(our_data_in_dictionary_format)
+
+    print("testing adding an item")
