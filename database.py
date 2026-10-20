@@ -1,13 +1,18 @@
 from pymongo import MongoClient
 
-client = MongoClient(
-    "mongodb://localhost:27017/",
-    serverSelectionTimeoutMS=5000
-)
+# connection to the actual database, link is to where it lives on the pc
+client = MongoClient("mongodb://localhost:27017")
 
+# we are specifying which of our possibly many databases we are using in this app
 db = client["arcane_avenue"]
+
+# we are getting specific collections we have, so other files can import and use them
 users = db["users"]
+
+# OPTIONAL, ONLY IF YOU TRULLY CAN'T HAVE DUPLICATE VALUES
 users.create_index("email", unique=True)
 
-test_collection = db["test_collection"]
-test_collection.create_index("email", unique=True)
+
+
+
+

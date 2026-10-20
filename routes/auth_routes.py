@@ -1,91 +1,69 @@
-from fastapi import APIRouter, HTTPException
+import json
+
+from fastapi import APIRouter, HTTPException 
+
+from database import users
+from models.auth_models import LoginForm, RegisterForm
+
+from pymongo.errors import DuplicateKeyError
+
+# name this something sensible, usually same as name of the file 
+auth_router = APIRouter() 
 
 
-from models.auth_models import LoginForm, RegisterForm, AuthResponse
-
-from database import test_collection
-
-auth_router = APIRouter()
-
-# EVERY TIME OUR SERVER REFRESHES, THIS WILL RESET ITSELF TO THIS
-# ANY USERS WE CREATE WILL GET DELTED
-FAKE_USER_DB = {
-    "goober@gmail.com" : {
-        "email" : "goober@gmail.com",
-        "password" : "test",
-        "account_type" : "buyer"
-    }
-}
-
-@auth_router.get("/test/")
-def read_root():
-    return {"auth": "test"}
 
 
-@auth_router.post("/register", response_model=AuthResponse)
+@auth_router.get("/")
+def test_auth_router():
+    return {"status" : "works"}
+
+# GET function for requesting data
+# We don't need to provide any specifying information for this functionality
+@auth_router.get("/all")
+def get_all_users():
+    # get all users from database
+    result = users.find().to_list()
+    for user in result:
+        user["_id"] = str(user["_id"])
+    # result is a Cursor
+    print(result)
+    
+    return{"all_users" : result}
+
+
+@auth_router.post("/register")
 def register_user(form: RegisterForm):
 
 
-    # check if user already exists
-    found_user = FAKE_USER_DB.get(form.email)
-
-    if(found_user):
+    try:
+        users.insert_one({
+            "email" : form.email,
+            "password" : form.password,
+            "account_type" : form.account_type
+        })
+    except DuplicateKeyError:
         raise HTTPException(
-            status_code=403,
-            detail="User with this email already exists"
+            status_code=409,
+            detail="Account already exists"
         )
 
-    user_dict = form.model_dump()
-
-    FAKE_USER_DB[form.email] = user_dict
-    print("new user database: ")
-    print(FAKE_USER_DB)
-
-    #safasfsa
-
-    # return the user response so we can automatically log them in 
-    return AuthResponse(
-        email=form.email,
-        account_type=form.account_type
-    ) 
+    
+    return {"status" : "success"}
 
 
 
-@auth_router.post("/login", response_model=AuthResponse)
-def login_user(form: LoginForm):
+@auth_router.post("/login")
+def login(form: LoginForm):
 
-    found_user = FAKE_USER_DB.get(form.email)
+    found_user = users.find_one({"email" : form.email, "password" : form.password})
 
-    # if no user found, raise an exception saying invalid credentials
     if found_user == None:
         raise HTTPException(
-            status_code=401,
-            detail="Invalid Credentials"
+            status_code=404,
+            detail="invalid credentials"
         )
-
-    if found_user["password"] != form.password:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid Credentials"
-        )
-
-    return AuthResponse(
-        email=form.email,
-        account_type=found_user["account_type"]
-    ) 
-
-
-
-from pydantic import BaseModel
-class TestAdd(BaseModel):
-    email: str
-    description: str
-
-@auth_router.post("/test_add")
-def test_add(data: TestAdd):
-
-    our_data_in_dictionary_format = data.model_dump();
-
-    test_collection.insert_one(our_data_in_dictionary_format)
-
-    print("testing adding an item")
+    
+    return {
+        "email" : found_user["email"],
+        "account_type" : found_user["account_type"]
+    }
