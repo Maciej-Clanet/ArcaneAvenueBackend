@@ -7,6 +7,8 @@ from models.auth_models import LoginForm, RegisterForm
 
 from pymongo.errors import DuplicateKeyError
 
+from security import hash_password, verify_password;
+
 # name this something sensible, usually same as name of the file 
 auth_router = APIRouter() 
 
@@ -34,11 +36,10 @@ def get_all_users():
 @auth_router.post("/register")
 def register_user(form: RegisterForm):
 
-
     try:
         users.insert_one({
             "email" : form.email,
-            "password" : form.password,
+            "password" : hash_password(form.password),
             "account_type" : form.account_type
         })
     except DuplicateKeyError:
@@ -55,9 +56,15 @@ def register_user(form: RegisterForm):
 @auth_router.post("/login")
 def login(form: LoginForm):
 
-    found_user = users.find_one({"email" : form.email, "password" : form.password})
+    found_user = users.find_one({"email" : form.email})
 
     if found_user == None:
+        raise HTTPException(
+            status_code=404,
+            detail="invalid credentials"
+        )
+
+    if verify_password(form.password, found_user["password"]) == False:
         raise HTTPException(
             status_code=404,
             detail="invalid credentials"
